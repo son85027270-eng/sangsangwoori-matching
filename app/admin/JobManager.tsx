@@ -64,16 +64,26 @@ export default function JobManager() {
     }
 
     setAdding(true);
-    const { error } = await supabase.from("jobs").insert({
-      title: form.title.trim(),
-      region: form.region,
-      job_type: form.job_type,
-      required_career: form.required_career ? Number(form.required_career) : 0,
-    });
+    const { data: newJob, error } = await supabase
+      .from("jobs")
+      .insert({
+        title: form.title.trim(),
+        region: form.region,
+        job_type: form.job_type,
+        required_career: form.required_career ? Number(form.required_career) : 0,
+      })
+      .select()
+      .single();
 
-    if (error) {
+    if (error || !newJob) {
       setAddStatus("error");
     } else {
+      // 새 일자리와 기존 시니어 전체 자동 재매칭
+      await fetch("/api/rematch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: newJob.id }),
+      });
       setAddStatus("success");
       setForm(INITIAL);
       setErrors({});

@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { MatchWithRelations, Senior } from "@/lib/supabase";
 import { assignMatch } from "./actions";
 import JobManager from "./JobManager";
+import RematchButton from "./RematchButton";
 
 function getSupabase() {
   return createClient(
@@ -95,8 +96,13 @@ export default async function AdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
-      <h1 className="text-4xl font-bold text-gray-900 mb-2">담당자 대시보드</h1>
-      <p className="text-xl text-gray-600 mb-8">매칭 현황을 확인하고 배정을 처리합니다</p>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">담당자 대시보드</h1>
+          <p className="text-xl text-gray-600">매칭 현황을 확인하고 배정을 처리합니다</p>
+        </div>
+        <RematchButton />
+      </div>
 
       {/* 통계 */}
       <div className="grid grid-cols-3 gap-4 mb-10">
