@@ -1,82 +1,163 @@
-const COLUMNS = [
-  {
-    id: "unmatched",
-    label: "미매칭",
-    headerColor: "bg-red-600",
-    borderColor: "border-red-200",
-    bgColor: "bg-red-50",
-  },
-  {
-    id: "pending",
-    label: "매칭 대기",
-    headerColor: "bg-yellow-500",
-    borderColor: "border-yellow-200",
-    bgColor: "bg-yellow-50",
-  },
-  {
-    id: "assigned",
-    label: "배정 완료",
-    headerColor: "bg-green-600",
-    borderColor: "border-green-200",
-    bgColor: "bg-green-50",
-  },
-];
+import { createClient } from "@supabase/supabase-js";
+import type { MatchWithRelations, Senior } from "@/lib/supabase";
+import { assignMatch } from "./actions";
+import JobManager from "./JobManager";
 
-function SkeletonCard() {
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
+async function getData() {
+  const supabase = getSupabase();
+
+  const [seniorsRes, matchedRes, pendingRes, assignedRes] = await Promise.all([
+    supabase.from("seniors").select("*"),
+    supabase.from("matches").select("senior_id"),
+    supabase
+      .from("matches")
+      .select("*, seniors(*), jobs(*)")
+      .eq("status", "pending")
+      .order("score", { ascending: false }),
+    supabase
+      .from("matches")
+      .select("*, seniors(*), jobs(*)")
+      .eq("status", "assigned")
+      .order("score", { ascending: false }),
+  ]);
+
+  const allSeniors: Senior[] = seniorsRes.data ?? [];
+  const matchedIds = new Set((matchedRes.data ?? []).map((m) => m.senior_id));
+  const unmatched = allSeniors.filter((s) => !matchedIds.has(s.id));
+  const pending: MatchWithRelations[] = (pendingRes.data as MatchWithRelations[]) ?? [];
+  const assigned: MatchWithRelations[] = (assignedRes.data as MatchWithRelations[]) ?? [];
+
+  return { unmatched, pending, assigned };
+}
+
+function AssignButton({ matchId }: { matchId: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-2">
-      <div className="h-5 bg-gray-200 rounded w-3/4" />
-      <div className="h-4 bg-gray-100 rounded w-1/2" />
+    <form
+      action={async () => {
+        "use server";
+        await assignMatch(matchId);
+      }}
+    >
+      <button
+        type="submit"
+        className="mt-3 w-full py-2 text-base font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 transition-colors"
+      >
+        배정 완료 처리
+      </button>
+    </form>
+  );
+}
+
+function SeniorCard({ senior }: { senior: Senior }) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="text-xl font-bold text-gray-800">{senior.name}</div>
+      <div className="text-base text-gray-600 mt-1">
+        {senior.region} | {senior.desired_job} | 경력 {senior.career_years}년
+      </div>
     </div>
   );
 }
 
-export default function AdminPage() {
+function MatchCard({ match, showAssign }: { match: MatchWithRelations; showAssign: boolean }) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xl font-bold text-gray-800">{match.seniors.name}</span>
+        <span className="text-2xl font-bold text-blue-600">{match.score}점</span>
+      </div>
+      <div className="text-base text-gray-600">
+        {match.jobs.title} | {match.jobs.region}
+      </div>
+      <div className="text-sm text-gray-500 mt-1">
+        {match.seniors.desired_job} → {match.jobs.job_type}
+      </div>
+      {showAssign && <AssignButton matchId={match.id} />}
+    </div>
+  );
+}
+
+export default async function AdminPage() {
+  const { unmatched, pending, assigned } = await getData();
+
+  const stats = [
+    { label: "등록 시니어", value: unmatched.length + pending.length + assigned.length },
+    { label: "매칭 성공", value: pending.length + assigned.length },
+    { label: "배정 완료", value: assigned.length },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
       <h1 className="text-4xl font-bold text-gray-900 mb-2">담당자 대시보드</h1>
-      <p className="text-xl text-gray-600 mb-10">
-        시니어 매칭 현황을 한눈에 확인합니다
-      </p>
+      <p className="text-xl text-gray-600 mb-8">매칭 현황을 확인하고 배정을 처리합니다</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {COLUMNS.map((col) => (
-          <div
-            key={col.id}
-            className={`border-2 ${col.borderColor} ${col.bgColor} rounded-2xl overflow-hidden`}
-          >
-            <div className={`${col.headerColor} px-6 py-4`}>
-              <h2 className="text-2xl font-bold text-white">{col.label}</h2>
-              <span className="text-white text-lg opacity-80">— 건</span>
-            </div>
-
-            <div className="p-5 flex flex-col gap-4">
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <p className="text-center text-gray-400 text-base pt-2">
-                데이터 연동 예정
-              </p>
-            </div>
+      {/* 통계 */}
+      <div className="grid grid-cols-3 gap-4 mb-10">
+        {stats.map((s) => (
+          <div key={s.label} className="bg-white border-2 border-gray-200 rounded-2xl p-5 text-center">
+            <div className="text-5xl font-bold text-blue-600 mb-1">{s.value}</div>
+            <div className="text-lg text-gray-600">{s.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="mt-10 p-6 bg-gray-50 border-2 border-gray-200 rounded-2xl">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">전체 통계</h2>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          {[
-            { label: "등록된 시니어", value: "—" },
-            { label: "등록된 일자리", value: "—" },
-            { label: "매칭 성공률", value: "— %" },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl p-4 border border-gray-200">
-              <div className="text-4xl font-bold text-blue-600 mb-1">{stat.value}</div>
-              <div className="text-lg text-gray-600">{stat.label}</div>
-            </div>
-          ))}
+      {/* 3컬럼 칸반 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 미매칭 */}
+        <div className="border-2 border-red-200 bg-red-50 rounded-2xl overflow-hidden">
+          <div className="bg-red-600 px-6 py-4">
+            <h2 className="text-2xl font-bold text-white">미매칭</h2>
+            <span className="text-white text-lg opacity-80">{unmatched.length}명</span>
+          </div>
+          <div className="p-4 flex flex-col gap-3">
+            {unmatched.length === 0 ? (
+              <p className="text-center text-gray-400 py-6">없음</p>
+            ) : (
+              unmatched.map((s) => <SeniorCard key={s.id} senior={s} />)
+            )}
+          </div>
+        </div>
+
+        {/* 매칭 대기 */}
+        <div className="border-2 border-yellow-200 bg-yellow-50 rounded-2xl overflow-hidden">
+          <div className="bg-yellow-500 px-6 py-4">
+            <h2 className="text-2xl font-bold text-white">매칭 대기</h2>
+            <span className="text-white text-lg opacity-80">{pending.length}건</span>
+          </div>
+          <div className="p-4 flex flex-col gap-3">
+            {pending.length === 0 ? (
+              <p className="text-center text-gray-400 py-6">없음</p>
+            ) : (
+              pending.map((m) => <MatchCard key={m.id} match={m} showAssign={true} />)
+            )}
+          </div>
+        </div>
+
+        {/* 배정 완료 */}
+        <div className="border-2 border-green-200 bg-green-50 rounded-2xl overflow-hidden">
+          <div className="bg-green-600 px-6 py-4">
+            <h2 className="text-2xl font-bold text-white">배정 완료</h2>
+            <span className="text-white text-lg opacity-80">{assigned.length}건</span>
+          </div>
+          <div className="p-4 flex flex-col gap-3">
+            {assigned.length === 0 ? (
+              <p className="text-center text-gray-400 py-6">없음</p>
+            ) : (
+              assigned.map((m) => <MatchCard key={m.id} match={m} showAssign={false} />)
+            )}
+          </div>
         </div>
       </div>
+
+      {/* 일자리 관리 */}
+      <JobManager />
     </div>
   );
 }

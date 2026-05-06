@@ -28,5 +28,11 @@ export type Match = {
   senior_id: string;
   job_id: string;
   score: number;
+  status: "pending" | "assigned";
   created_at: string;
+};
+
+export type MatchWithRelations = Match & {
+  seniors: Senior;
+  jobs: Job;
 };
