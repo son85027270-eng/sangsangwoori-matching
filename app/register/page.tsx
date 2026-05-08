@@ -30,9 +30,7 @@ export default function RegisterPage() {
     return e;
   }
 
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     if (errors[name as keyof FormState]) {
@@ -79,14 +77,14 @@ export default function RegisterPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12">
-      <h1 className="text-4xl font-bold text-gray-900 mb-2">프로필 등록</h1>
+      <h1 className="text-4xl font-bold text-gray-900 mb-2">시니어 일자리 신청하기</h1>
       <p className="text-xl text-gray-600 mb-10">
-        정보를 입력하시면 맞는 일자리를 자동으로 찾아드립니다
+        아래 정보를 입력하시면 맞는 일자리를 자동으로 찾아드립니다
       </p>
 
       {submitStatus === "success" && (
         <div className="mb-8 p-5 bg-green-50 border-2 border-green-500 rounded-2xl text-xl font-semibold text-green-800">
-          등록이 완료되었습니다. 맞는 일자리를 찾고 있습니다!
+          등록이 완료되었습니다. 담당자가 곧 연락드립니다
         </div>
       )}
       {submitStatus === "error" && (
@@ -101,8 +99,9 @@ export default function RegisterPage() {
           <label htmlFor="name" className="text-xl font-semibold text-gray-800">
             이름 <span className="text-red-500">*</span>
           </label>
+          <p className="text-lg text-gray-500">성함을 입력해 주세요</p>
           {errors.name && (
-            <div className="px-4 py-2 bg-red-50 border border-red-400 rounded-lg text-red-700 text-base font-medium">
+            <div className="px-4 py-2 bg-red-50 border border-red-400 rounded-lg text-red-700 text-lg font-medium">
               {errors.name}
             </div>
           )}
@@ -126,8 +125,9 @@ export default function RegisterPage() {
           <label htmlFor="region" className="text-xl font-semibold text-gray-800">
             지역 <span className="text-red-500">*</span>
           </label>
+          <p className="text-lg text-gray-500">어디에서 일하고 싶으세요?</p>
           {errors.region && (
-            <div className="px-4 py-2 bg-red-50 border border-red-400 rounded-lg text-red-700 text-base font-medium">
+            <div className="px-4 py-2 bg-red-50 border border-red-400 rounded-lg text-red-700 text-lg font-medium">
               {errors.region}
             </div>
           )}
@@ -144,9 +144,7 @@ export default function RegisterPage() {
           >
             <option value="">지역 선택</option>
             {REGIONS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
+              <option key={r} value={r}>{r}</option>
             ))}
           </select>
         </div>
@@ -156,8 +154,9 @@ export default function RegisterPage() {
           <label htmlFor="desired_job" className="text-xl font-semibold text-gray-800">
             희망 직종 <span className="text-red-500">*</span>
           </label>
+          <p className="text-lg text-gray-500">어떤 일을 하고 싶으세요?</p>
           {errors.desired_job && (
-            <div className="px-4 py-2 bg-red-50 border border-red-400 rounded-lg text-red-700 text-base font-medium">
+            <div className="px-4 py-2 bg-red-50 border border-red-400 rounded-lg text-red-700 text-lg font-medium">
               {errors.desired_job}
             </div>
           )}
@@ -174,18 +173,17 @@ export default function RegisterPage() {
           >
             <option value="">직종 선택</option>
             {JOB_TYPES.map((j) => (
-              <option key={j} value={j}>
-                {j}
-              </option>
+              <option key={j} value={j}>{j}</option>
             ))}
           </select>
         </div>
 
-        {/* 경력 (선택) */}
+        {/* 경력 */}
         <div className="flex flex-col gap-2">
           <label htmlFor="career_years" className="text-xl font-semibold text-gray-800">
             경력 (년) <span className="text-gray-400 text-base font-normal">선택</span>
           </label>
+          <p className="text-lg text-gray-500">일한 경험이 몇 년이나 되셨나요?</p>
           <input
             id="career_years"
             name="career_years"
@@ -201,7 +199,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={submitStatus === "loading"}
-          className="mt-4 py-5 text-2xl font-bold text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-4 py-4 text-2xl font-bold text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
         >
           {submitStatus === "loading" ? "저장 중..." : "등록하기"}
         </button>
