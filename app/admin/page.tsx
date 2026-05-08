@@ -35,7 +35,7 @@ async function getData() {
   const pending: MatchWithRelations[] = (pendingRes.data as MatchWithRelations[]) ?? [];
   const assigned: MatchWithRelations[] = (assignedRes.data as MatchWithRelations[]) ?? [];
 
-  return { unmatched, pending, assigned };
+  return { unmatched, pending, assigned, totalSeniors: allSeniors.length };
 }
 
 function AssignButton({ matchId }: { matchId: string }) {
@@ -86,10 +86,10 @@ function MatchCard({ match, showAssign }: { match: MatchWithRelations; showAssig
 }
 
 export default async function AdminPage() {
-  const { unmatched, pending, assigned } = await getData();
+  const { unmatched, pending, assigned, totalSeniors } = await getData();
 
   const stats = [
-    { label: "등록 시니어", value: unmatched.length + pending.length + assigned.length },
+    { label: "등록 시니어", value: totalSeniors },
     { label: "매칭 성공", value: pending.length + assigned.length },
     { label: "배정 완료", value: assigned.length },
   ];
