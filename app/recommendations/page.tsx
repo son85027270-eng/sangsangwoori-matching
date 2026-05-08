@@ -28,7 +28,7 @@ export default async function RecommendationsPage() {
 
       {matches.length === 0 ? (
         <div className="text-center py-20 text-2xl text-gray-400">
-          아직 매칭 결과가 없습니다.
+          현재 매칭되는 일자리가 없습니다.
           <br />
           <span className="text-lg mt-2 block">
             먼저{" "}
