@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 상상우리 매칭 시스템
 
-## Getting Started
+시니어 구직자와 일자리를 자동으로 연결하는 규칙 기반 매칭 웹 서비스입니다.
 
-First, run the development server:
+## 주요 기능
+
+- **시니어 프로필 등록** — 지역, 희망 직종, 경력 연수 입력
+- **자동 매칭** — 지역·직종·경력 기반 점수 계산 (최고 100점)
+- **추천 일자리 보기** — 매칭 점수 순 정렬
+- **담당자 대시보드** — 일자리 CRUD, 전체 매칭 결과 열람, 수동 재매칭
+
+## 기술 스택
+
+| 역할 | 기술 |
+|------|------|
+| 프레임워크 | Next.js (App Router) |
+| UI | Tailwind CSS |
+| 백엔드/DB | Supabase (PostgreSQL) |
+| 언어 | TypeScript |
+
+## 매칭 알고리즘
+
+| 조건 | 점수 |
+|------|------|
+| 지역 일치 | +50점 |
+| 경력 연수 충족 | +30점 |
+| 직종 일치 (부분 매칭) | +20점 |
+
+## 시작하기
+
+### 1. 환경 변수 설정
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local`을 열고 Supabase 프로젝트의 URL과 anon key를 입력합니다.  
+([Supabase 대시보드](https://supabase.com) → 프로젝트 선택 → Project Settings → API)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Supabase 테이블 생성
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Supabase SQL Editor에서 아래 쿼리를 실행합니다.
 
-## Learn More
+```sql
+create table seniors (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  region text not null,
+  desired_job text not null,
+  career_years int not null default 0,
+  created_at timestamptz default now()
+);
 
-To learn more about Next.js, take a look at the following resources:
+create table jobs (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  region text not null,
+  job_type text not null,
+  required_career int not null default 0,
+  created_at timestamptz default now()
+);
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+create table matches (
+  id uuid primary key default gen_random_uuid(),
+  senior_id uuid references seniors(id) on delete cascade,
+  job_id uuid references jobs(id) on delete cascade,
+  score int not null,
+  status text not null default 'pending',
+  created_at timestamptz default now()
+);
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 3. 의존성 설치 및 실행
 
-## Deploy on Vercel
+```bash
+npm install
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+브라우저에서 [http://localhost:3000](http://localhost:3000)을 열면 됩니다.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 페이지 구조
+
+| 경로 | 설명 |
+|------|------|
+| `/` | 메인 홈 |
+| `/register` | 시니어 프로필 등록 |
+| `/recommendations` | 추천 일자리 목록 |
+| `/admin` | 담당자 대시보드 (일자리 관리 + 매칭 현황) |
