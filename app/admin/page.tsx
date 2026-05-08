@@ -38,6 +38,30 @@ async function getData() {
   return { unmatched, pending, assigned, totalSeniors: allSeniors.length };
 }
 
+function WarningIcon() {
+  return (
+    <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg className="w-8 h-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
 function AssignButton({ matchId }: { matchId: string }) {
   return (
     <form
@@ -63,6 +87,12 @@ function SeniorCard({ senior }: { senior: Senior }) {
       <div className="text-base text-gray-600 mt-1">
         {senior.region} | {senior.desired_job} | 경력 {senior.career_years}년
       </div>
+      <a
+        href={`/recommendations?senior_id=${senior.id}`}
+        className="mt-3 block w-full py-2 text-base font-semibold text-center text-blue-600 border-2 border-blue-600 rounded-xl hover:bg-blue-50 transition-colors"
+      >
+        상세 보기
+      </a>
     </div>
   );
 }
@@ -80,6 +110,12 @@ function MatchCard({ match, showAssign }: { match: MatchWithRelations; showAssig
       <div className="text-sm text-gray-500 mt-1">
         {match.seniors.desired_job} → {match.jobs.job_type}
       </div>
+      <a
+        href={`/recommendations?senior_id=${match.senior_id}`}
+        className="mt-3 block w-full py-2 text-base font-semibold text-center text-blue-600 border-2 border-blue-600 rounded-xl hover:bg-blue-50 transition-colors"
+      >
+        상세 보기
+      </a>
       {showAssign && <AssignButton matchId={match.id} />}
     </div>
   );
@@ -89,9 +125,9 @@ export default async function AdminPage() {
   const { unmatched, pending, assigned, totalSeniors } = await getData();
 
   const stats = [
-    { label: "등록 시니어", value: totalSeniors },
-    { label: "매칭 성공", value: pending.length + assigned.length },
-    { label: "배정 완료", value: assigned.length },
+    { label: "등록 시니어", value: totalSeniors, icon: <WarningIcon /> },
+    { label: "매칭 성공", value: pending.length + assigned.length, icon: <ClockIcon /> },
+    { label: "배정 완료", value: assigned.length, icon: <CheckIcon /> },
   ];
 
   return (
@@ -108,6 +144,7 @@ export default async function AdminPage() {
       <div className="grid grid-cols-3 gap-4 mb-10">
         {stats.map((s) => (
           <div key={s.label} className="bg-white border-2 border-gray-200 rounded-2xl p-5 text-center">
+            <div className="flex justify-center mb-2">{s.icon}</div>
             <div className="text-5xl font-bold text-blue-600 mb-1">{s.value}</div>
             <div className="text-lg text-gray-600">{s.label}</div>
           </div>

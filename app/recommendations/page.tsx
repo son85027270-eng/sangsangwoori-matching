@@ -1,42 +1,72 @@
 import { createClient } from "@supabase/supabase-js";
-import type { MatchWithRelations } from "@/lib/supabase";
+import type { MatchWithRelations, Senior } from "@/lib/supabase";
 
-async function getMatches(): Promise<MatchWithRelations[]> {
-  const supabase = createClient(
+function getSupabase() {
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+}
 
-  const { data, error } = await supabase
+async function getMatches(seniorId?: string): Promise<MatchWithRelations[]> {
+  const supabase = getSupabase();
+  let query = supabase
     .from("matches")
     .select("*, seniors(*), jobs(*)")
     .order("score", { ascending: false });
 
+  if (seniorId) {
+    query = query.eq("senior_id", seniorId);
+  }
+
+  const { data, error } = await query;
   if (error || !data) return [];
   return data as MatchWithRelations[];
 }
 
-export default async function RecommendationsPage() {
-  const matches = await getMatches();
+async function getSenior(seniorId: string): Promise<Senior | null> {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from("seniors")
+    .select("*")
+    .eq("id", seniorId)
+    .single();
+  return data ?? null;
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 80) return "매우 적합";
+  if (score >= 50) return "적합";
+  return "보통";
+}
+
+export default async function RecommendationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ senior_id?: string }>;
+}) {
+  const { senior_id } = await searchParams;
+
+  const [matches, senior] = await Promise.all([
+    getMatches(senior_id),
+    senior_id ? getSenior(senior_id) : Promise.resolve(null),
+  ]);
+
+  const title = senior ? `${senior.name} 님께 맞는 일자리` : "추천 일자리";
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
-      <h1 className="text-4xl font-bold text-gray-900 mb-2">추천 일자리</h1>
+      <h1 className="text-4xl font-bold text-gray-900 mb-2">{title}</h1>
       <p className="text-xl text-gray-600 mb-10">
         매칭 점수가 높은 순서로 보여드립니다
       </p>
 
       {matches.length === 0 ? (
-        <div className="text-center py-20 text-2xl text-gray-400">
-          현재 매칭되는 일자리가 없습니다.
-          <br />
-          <span className="text-lg mt-2 block">
-            먼저{" "}
-            <a href="/register" className="text-blue-600 underline">
-              프로필을 등록
-            </a>
-            해 주세요.
-          </span>
+        <div className="text-center py-20">
+          <p className="text-2xl text-gray-400">현재 매칭되는 일자리가 없습니다.</p>
+          <p className="text-xl text-gray-500 mt-3">
+            담당자가 직접 연락드리니 잠시만 기다려 주세요
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
@@ -66,9 +96,11 @@ export default async function RecommendationsPage() {
                 <div className="text-lg text-gray-600">
                   필요 경력: {match.jobs.required_career}년 이상
                 </div>
-                <div className="text-base text-gray-500 mt-1">
-                  신청자: {match.seniors.name} ({match.seniors.region})
-                </div>
+                {!senior_id && (
+                  <div className="text-base text-gray-500 mt-1">
+                    신청자: {match.seniors.name} ({match.seniors.region})
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col items-center gap-1 min-w-28">
@@ -83,7 +115,17 @@ export default async function RecommendationsPage() {
                 >
                   {match.score}
                 </span>
-                <span className="text-base text-gray-500">매칭 점수</span>
+                <span
+                  className={`text-base font-semibold ${
+                    match.score >= 80
+                      ? "text-blue-600"
+                      : match.score >= 50
+                      ? "text-green-600"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {scoreLabel(match.score)}
+                </span>
                 <span className="text-sm text-gray-400">#{idx + 1}</span>
               </div>
             </div>
